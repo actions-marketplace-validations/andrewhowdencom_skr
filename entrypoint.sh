@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Fix "dubious ownership" error in GitHub Actions/Docker
+git config --global --add safe.directory '*'
+
 # Inputs from action.yml
 # GitHub Actions maps inputs to INPUT_<NAME_UPPER>
 REGISTRY="${INPUT_REGISTRY}"
