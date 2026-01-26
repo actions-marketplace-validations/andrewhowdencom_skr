@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/andrewhowdencom/skr/pkg/discovery"
 	"github.com/andrewhowdencom/skr/pkg/skill"
 	"github.com/andrewhowdencom/skr/pkg/store"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -34,9 +35,9 @@ extracts it to the agent's skill directory.`,
 			return fmt.Errorf("failed to get current working directory: %w", err)
 		}
 
-		installDir, err := findInstallDir(cwd)
+		installDir, err := discovery.FindAgentSkillsDir(cwd)
 		if err != nil {
-			return err
+			return fmt.Errorf("agent context not found: %w. Please ensure you are inside a project with .agent/skills", err)
 		}
 
 		fmt.Printf("Installing to %s\n", installDir)
@@ -134,25 +135,6 @@ extracts it to the agent's skill directory.`,
 
 		return nil
 	},
-}
-
-func findInstallDir(startDir string) (string, error) {
-	dir := startDir
-	for {
-		target := filepath.Join(dir, ".agent", "skills")
-		info, err := os.Stat(target)
-		if err == nil && info.IsDir() {
-			return target, nil
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-
-	return "", fmt.Errorf("could not find .agent/skills directory in any parent of %s. Please create it first.", startDir)
 }
 
 func unpackLayer(r io.Reader, dest string) error {

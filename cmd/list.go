@@ -2,64 +2,58 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
+	"os"
+	"path/filepath"
+	"text/tabwriter"
 
-	"github.com/andrewhowdencom/skr/pkg/store"
+	"github.com/andrewhowdencom/skr/pkg/discovery"
 	"github.com/spf13/cobra"
 )
 
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List installed Agent Skills",
-	Long: `List all Agent Skills currently installed on the local agent.
+	Long: `List all Agent Skills currently installed in the active agent context (project).
 
-Displays name, version, and other metadata for installed skills.`,
+Scans the hierarchy for .agent/skills and merges with global skills.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := cmd.Context()
-		st, err := store.New("")
+		cwd, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("failed to initialize store: %w", err)
+			return fmt.Errorf("failed to get current working directory: %w", err)
 		}
 
-		tags, err := st.List(ctx)
+		skills, err := discovery.ListInstalledSkills(cwd)
 		if err != nil {
-			return fmt.Errorf("failed to list skills: %w", err)
+			// If err means not found, behave gracefully
+			fmt.Printf("No agent context found (searching up from %s).\n", cwd)
+			return nil
 		}
 
-		// Header
-		fmt.Printf("%-30s %-15s %-15s %-10s\n", "REPOSITORY", "TAG", "IMAGE ID", "SIZE")
-
-		for _, tag := range tags {
-			// Resolve to get digest and size
-			desc, err := st.Resolve(ctx, tag)
-			if err != nil {
-				// warn and continue?
-				continue
-			}
-
-			// For REPOSITORY/TAG splitting, we assume standard "repo:tag" format.
-			repo := tag
-			version := "<none>"
-
-			if idx := lastIndex(tag, ":"); idx != -1 {
-				repo = tag[:idx]
-				version = tag[idx+1:]
-			}
-
-			// Short digest
-			digestVal := desc.Digest.String()
-			if len(digestVal) > 12 {
-				digestVal = digestVal[7:19] // sha256:1234... -> 1234...
-			}
-
-			// Size (human readable-ish)
-			size := fmt.Sprintf("%d B", desc.Size)
-			if desc.Size > 1024 {
-				size = fmt.Sprintf("%.2f KB", float64(desc.Size)/1024)
-			}
-
-			fmt.Printf("%-30s %-15s %-15s %-10s\n", repo, version, digestVal, size)
+		if len(skills) == 0 {
+			fmt.Println("No skills installed in this context.")
+			return nil
 		}
+
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+		fmt.Fprintln(w, "NAME\tVERSION\tGLOBAL\tPATH")
+
+		for _, s := range skills {
+			globalMark := ""
+			if s.IsGlobal {
+				globalMark = "*"
+			}
+
+			// Relative path if possible for cleaner output
+			displayPath := s.Path
+			if rel, err := filepath.Rel(cwd, s.Path); err == nil {
+				// Use relative path only if it's shorter or reasonable?
+				// Actually rel path is usually preferred for local context.
+				displayPath = rel
+			}
+
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", s.Name, s.Version, globalMark, displayPath)
+		}
+		w.Flush()
 
 		return nil
 	},
@@ -67,8 +61,4 @@ Displays name, version, and other metadata for installed skills.`,
 
 func init() {
 	rootCmd.AddCommand(listCmd)
-}
-
-func lastIndex(s, sep string) int {
-	return strings.LastIndex(s, sep)
 }
