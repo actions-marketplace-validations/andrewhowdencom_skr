@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -16,10 +15,7 @@ and install skills using standard OCI (Open Container Initiative) registries.
 It simplifies the distribution of AI agent capabilities, treating them as versioned
 artifacts similar to container images.`,
 
-	RunE: func(cmd *cobra.Command, args []string) error {
-		cmd.Help()
-		return fmt.Errorf("subcommand required")
-	},
+	// RunE removed to allow default Cobra behavior (print help)
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
