@@ -60,21 +60,10 @@ If --base is provided, only publishes skills that have changed since that git re
 			var changedSkills []string
 			for _, skillPath := range skills {
 				// naive check: is any changed file inside the skill directory?
-				// Rel path logic...
 				isChanged := false
 				for _, cf := range changedFiles {
-					// We need absolute or relative paths to match?
-					// git diff returns paths relative to repo root.
-					// skillPath is relative to CWD (rootDir).
-					// This comparison is tricky unless we resolve everything to absolute or repo-relative.
-					// Assumption: CWD is repo root for now, or close to it.
-					// Better approach: Check if `cf` starts with `skillPath` (cleanly).
-
 					// Normalize paths
 					relCf := cf
-					// If skillPath is ".", logic breaks.
-					// If skillPath is "skills/foo", and cf is "skills/foo/SKILL.md", it matches.
-
 					if strings.HasPrefix(relCf, skillPath) {
 						isChanged = true
 						break
@@ -98,36 +87,56 @@ If --base is provided, only publishes skills that have changed since that git re
 			return fmt.Errorf("failed to initialize store: %w", err)
 		}
 
+		// Get git metadata
+		shortSHA, _ := git.GetShortSHA()
+		headTags, _ := git.GetHeadTags()
+		repoName, _ := cmd.Flags().GetString("repository")
+
 		// 3. Build and Push each skill
 		var errs []error
 		for _, skillPath := range skills {
 			skillName := filepath.Base(skillPath)
-			// Version strategy: use 'latest' and maybe a git-sha tag if we calculated it?
-			// For simplicity in this iteration: uses 'latest' + Git SHA if we can get it.
-			// Let's stick to :latest for the first pass, as versioning from SKILL.md requires parsing.
 
-			// FIXME: We probably want a version strategy flag.
-			// Let's generate a pseudo-version "hash-{shortSHA}" or just use "latest"
-			tag := fmt.Sprintf("%s/%s/%s:latest", registryHost, namespace, skillName)
+			// Construct base image name
+			var baseImageName string
+			if repoName != "" {
+				// ghcr.io/owner/repo.skill
+				baseImageName = fmt.Sprintf("%s/%s/%s.%s", registryHost, namespace, repoName, skillName)
+			} else {
+				// ghcr.io/owner/skill
+				baseImageName = fmt.Sprintf("%s/%s/%s", registryHost, namespace, skillName)
+			}
 
-			fmt.Printf("\nProcessing %s -> %s\n", skillName, tag)
+			// Determine tags
+			var tags []string
+			tags = append(tags, baseImageName+":latest")
+			if shortSHA != "" {
+				tags = append(tags, baseImageName+":"+shortSHA)
+			}
+			for _, t := range headTags {
+				tags = append(tags, baseImageName+":"+t)
+			}
+
+			fmt.Printf("\nProcessing %s -> %v\n", skillName, tags)
 
 			absPath, _ := filepath.Abs(skillPath)
-			// Build
-			// Annotations?
-			if err := st.Build(ctx, absPath, tag, nil); err != nil {
-				fmt.Printf("Check failure: %v\n", err)
-				errs = append(errs, fmt.Errorf("build failed for %s: %w", skillName, err))
-				continue
-			}
 
-			// Push
-			if err := registry.Push(ctx, st, tag); err != nil {
-				fmt.Printf("Push failure: %v\n", err)
-				errs = append(errs, fmt.Errorf("push failed for %s: %w", skillName, err))
-				continue
+			for _, tag := range tags {
+				// Build (idempotent content-wise, just updates tag reference)
+				if err := st.Build(ctx, absPath, tag, nil); err != nil {
+					fmt.Printf("Build failure for %s: %v\n", tag, err)
+					errs = append(errs, fmt.Errorf("build failed for %s: %w", tag, err))
+					continue
+				}
+
+				// Push
+				if err := registry.Push(ctx, st, tag); err != nil {
+					fmt.Printf("Push failure for %s: %v\n", tag, err)
+					errs = append(errs, fmt.Errorf("push failed for %s: %w", tag, err))
+					continue
+				}
+				fmt.Printf("Published %s\n", tag)
 			}
-			fmt.Printf("Published %s\n", tag)
 		}
 
 		if len(errs) > 0 {
