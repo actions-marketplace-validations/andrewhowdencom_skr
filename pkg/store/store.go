@@ -184,6 +184,19 @@ func (s *Store) Get(ctx context.Context, target ocispec.Descriptor) (io.ReadClos
 	return s.oci.Fetch(ctx, target)
 }
 
+// List returns a list of all tags in the store
+func (s *Store) List(ctx context.Context) ([]string, error) {
+	var tags []string
+	err := s.oci.Tags(ctx, "", func(tagsList []string) error {
+		tags = append(tags, tagsList...)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return tags, nil
+}
+
 // Resolve resolves a reference (tag/digest) to a descriptor
 func (s *Store) Resolve(ctx context.Context, ref string) (ocispec.Descriptor, error) {
 	return s.oci.Resolve(ctx, ref)
