@@ -56,7 +56,7 @@ func New(path string) (*Store, error) {
 	}, nil
 }
 
-func (s *Store) Build(ctx context.Context, srcDir string, tag string) error {
+func (s *Store) Build(ctx context.Context, srcDir string, tag string, annotations map[string]string) error {
 	// 1. Create a tarball of the directory
 	buf := &bytes.Buffer{}
 	gw := gzip.NewWriter(buf)
@@ -145,10 +145,10 @@ func (s *Store) Build(ctx context.Context, srcDir string, tag string) error {
 	}
 
 	// 4. Create and push Manifest
-	// 4. Create and push Manifest
 	manifest := ocispec.Manifest{
-		Config: configDesc,
-		Layers: []ocispec.Descriptor{layerDesc},
+		Config:      configDesc,
+		Layers:      []ocispec.Descriptor{layerDesc},
+		Annotations: annotations,
 	}
 	manifest.SchemaVersion = 2
 
