@@ -300,6 +300,11 @@ func (s *Store) Tag(ctx context.Context, desc ocispec.Descriptor, reference stri
 	return s.oci.Tag(ctx, desc, reference)
 }
 
+// Delete removes a descriptor from the store
+func (s *Store) Delete(ctx context.Context, target ocispec.Descriptor) error {
+	return s.oci.Delete(ctx, target)
+}
+
 // pushBlob pushes content if it doesn't already exist
 func (s *Store) pushBlob(ctx context.Context, desc ocispec.Descriptor, r io.Reader) error {
 	exists, err := s.oci.Exists(ctx, desc)
