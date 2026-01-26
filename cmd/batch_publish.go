@@ -143,6 +143,7 @@ func init() {
 	batchPublishCmd.Flags().String("base", "", "Git reference to compare against (e.g. origin/main)")
 	batchPublishCmd.Flags().String("registry", "", "Registry host (e.g. ghcr.io)")
 	batchPublishCmd.Flags().String("namespace", "", "Registry namespace (e.g. user or org)")
+	batchPublishCmd.Flags().String("repository", "", "Repository name (optional, enables repo.skill naming)")
 	batchPublishCmd.MarkFlagRequired("registry")
 	batchPublishCmd.MarkFlagRequired("namespace")
 }

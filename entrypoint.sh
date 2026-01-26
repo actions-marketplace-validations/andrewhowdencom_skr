@@ -7,6 +7,7 @@ REGISTRY="${INPUT_REGISTRY}"
 USERNAME="${INPUT_USERNAME}"
 PASSWORD="${INPUT_PASSWORD}"
 NAMESPACE="${INPUT_NAMESPACE}"
+REPOSITORY="${INPUT_REPOSITORY}"
 PATH_VAL="${INPUT_PATH}"
 BASE="${INPUT_BASE}"
 
@@ -18,6 +19,10 @@ fi
 
 # Construct command
 CMD="skr batch publish $PATH_VAL --registry $REGISTRY --namespace $NAMESPACE"
+
+if [ -n "$REPOSITORY" ]; then
+    CMD="$CMD --repository $REPOSITORY"
+fi
 
 if [ -n "$BASE" ]; then
     CMD="$CMD --base $BASE"

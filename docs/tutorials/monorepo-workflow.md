@@ -18,14 +18,14 @@ my-skills-repo/
 │   │   └── SKILL.md
 │   └── text-utils/
 │       └── SKILL.md
-└── README.md
+└── README.md                                                                                   
 ```
 
 ## Automation Strategy
 
 To efficiently manage updates, we use `skr batch publish`. This command:
 1.  **Detects changes**: Checks which `skills/*` directories have changed since the last commit.
-2.  **Builds**: Creates OCI artifacts for modified skills.
+2.  **Builds**: Creates OCI artifacts for modified skills.  
 3.  **Pushes**: Uploads them to the registry.
 
 ## GitHub Action Workflow
@@ -66,6 +66,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
         namespace: ${{ env.NAMESPACE }}
+        repository: ${{ github.event.repository.name }} # Creates: ghcr.io/owner/repo.skill
         base: ${{ github.event.before }}
         path: ./skills
 ```

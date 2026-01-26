@@ -29,4 +29,5 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
         namespace: ${{ env.NAMESPACE }}
+        repository: ${{ github.event.repository.name }}
         base: ${{ github.event.before }}

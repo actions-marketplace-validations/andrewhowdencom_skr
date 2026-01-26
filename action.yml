@@ -13,6 +13,9 @@ inputs:
   namespace:
     description: 'Registry namespace (e.g. user or org)'
     required: true
+  repository:
+    description: 'Repository name (e.g. my-skills-repo). Enables repo-scoped naming.'
+    required: false
   path:
     description: 'Path to skills directory'
     required: false
