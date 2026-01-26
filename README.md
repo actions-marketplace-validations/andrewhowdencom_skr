@@ -1,6 +1,8 @@
 # Skill Registry (skr)
 
 **skr** is a tool designed to manage [Agent Skills](https://agentskills.io/what-are-skills)—a lightweight, open format for extending AI agent capabilities with specialized knowledge and workflows.
+ 
+> 📘 **Documentation**: [https://andrewhowdencom.github.io/skr/](https://andrewhowdencom.github.io/skr/)
 
 ## Goal
 
