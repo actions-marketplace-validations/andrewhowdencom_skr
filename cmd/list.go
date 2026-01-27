@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"text/tabwriter"
 
+	"github.com/andrewhowdencom/skr/pkg/config"
 	"github.com/andrewhowdencom/skr/pkg/discovery"
 	"github.com/spf13/cobra"
 )
@@ -22,7 +23,27 @@ Scans the hierarchy for .agent/skills and merges with global skills.`,
 			return fmt.Errorf("failed to get current working directory: %w", err)
 		}
 
-		skills, err := discovery.ListInstalledSkills(cwd)
+		// Load config to get agent paths
+		cfg, err := config.LoadMerged(cwd)
+		if err != nil {
+			// If error, maybe just proceed? Or partial load?
+			// But LoadMerged calls Load which returns default if not found.
+			// It only errors on read/parse failure.
+			// Ideally we want to see errors.
+			return err
+		}
+
+		var extraPaths []string
+		home, err := os.UserHomeDir()
+		if err == nil {
+			for _, agentName := range cfg.Agents {
+				if pathFunc, ok := config.KnownAgents[agentName]; ok {
+					extraPaths = append(extraPaths, pathFunc(home))
+				}
+			}
+		}
+
+		skills, err := discovery.ListInstalledSkills(cwd, extraPaths)
 		if err != nil {
 			// If err means not found, behave gracefully
 			fmt.Printf("No agent context found (searching up from %s).\n", cwd)

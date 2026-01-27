@@ -40,7 +40,7 @@ var syncCmd = &cobra.Command{
 		// Or if discovery failed, maybe we are initializing?
 		// But sync implies existing structure.
 
-		cfg, err := config.Load(projectRoot)
+		cfg, err := config.LoadMerged(projectRoot)
 		if err != nil {
 			return err
 		}

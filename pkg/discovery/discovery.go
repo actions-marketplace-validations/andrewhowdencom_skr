@@ -37,7 +37,7 @@ type InstalledSkill struct {
 }
 
 // ListInstalledSkills discovers all skills in the .agent/skills directory accessible from startDir
-func ListInstalledSkills(startDir string) ([]InstalledSkill, error) {
+func ListInstalledSkills(startDir string, extraSearchPaths []string) ([]InstalledSkill, error) {
 	var skills []InstalledSkill
 
 	// 1. Local Agent Skills
@@ -62,7 +62,43 @@ func ListInstalledSkills(startDir string) ([]InstalledSkill, error) {
 		}
 	}
 
-	// 2. Global Skills
+	// 2. Extra Search Paths (Agent Configured)
+	for _, path := range extraSearchPaths {
+		if path == "" {
+			continue
+		}
+		// Expand homedir if needed? For now assume caller handles expansion or absolute paths.
+		entries, err := os.ReadDir(path)
+		if err == nil {
+			for _, entry := range entries {
+				if entry.IsDir() {
+					skillPath := filepath.Join(path, entry.Name())
+					s, err := skill.Load(skillPath)
+					if err == nil {
+						// Check overrides
+						overridden := false
+						for _, existing := range skills {
+							if existing.Name == s.Name {
+								overridden = true
+								break
+							}
+						}
+
+						if !overridden {
+							skills = append(skills, InstalledSkill{
+								Name:     s.Name,
+								Path:     skillPath,
+								Version:  "agent",
+								IsGlobal: true, // Treated as external/global
+							})
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// 3. Global Skills
 	homeDir, err := os.UserHomeDir()
 	if err == nil {
 		globalDir := filepath.Join(homeDir, ".config", "agent", "skills")
