@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -28,7 +29,7 @@ If --global is set, installs to the global configuration.`,
 		ctx := cmd.Context()
 
 		// 1. Determine Context and Load Config
-		var configDir string
+		var configFilePath string
 		var installRoot string
 
 		if isGlobal {
@@ -36,7 +37,8 @@ If --global is set, installs to the global configuration.`,
 			if err != nil {
 				return fmt.Errorf("failed to get home directory: %w", err)
 			}
-			configDir = filepath.Join(homeDir, ".config")
+			configDir := filepath.Join(homeDir, ".config", "skr")
+			configFilePath = filepath.Join(configDir, config.ConfigFileName) // config.yaml
 			installRoot = filepath.Join(homeDir, ".config", "agent", "skills")
 		} else {
 			cwd, err := os.Getwd()
@@ -56,7 +58,9 @@ If --global is set, installs to the global configuration.`,
 				// Let's error for now.
 				return fmt.Errorf("agent context not found (use --global or run inside a project): %w", err)
 			}
-			configDir = filepath.Dir(filepath.Dir(agentDir)) // Parent of .agent
+			configDir := filepath.Dir(filepath.Dir(agentDir))               // Parent of .agent
+			configFilePath = filepath.Join(configDir, config.AltConfigName) // .skr.yaml
+
 			installRoot = agentDir
 		}
 
@@ -64,12 +68,12 @@ If --global is set, installs to the global configuration.`,
 		if err := os.MkdirAll(installRoot, 0755); err != nil {
 			return fmt.Errorf("failed to create install directory: %w", err)
 		}
-		// Ensure config dir exists (mostly for global)
-		if err := os.MkdirAll(configDir, 0755); err != nil {
+		// Ensure config dir exists
+		if err := os.MkdirAll(filepath.Dir(configFilePath), 0755); err != nil {
 			return fmt.Errorf("failed to create config directory: %w", err)
 		}
 
-		cfg, err := config.Load(configDir)
+		cfg, err := config.Load(configFilePath)
 		if err != nil {
 			return err
 		}
@@ -85,12 +89,12 @@ If --global is set, installs to the global configuration.`,
 		}
 		if !exists {
 			cfg.Skills = append(cfg.Skills, ref)
-			if err := cfg.Save(configDir); err != nil {
+			if err := cfg.SaveTo(configFilePath); err != nil {
 				return fmt.Errorf("failed to save config: %w", err)
 			}
-			fmt.Printf("Added '%s' to %s\n", ref, filepath.Join(configDir, config.ConfigFileName))
+			slog.Info("added skill to config", "skill", ref, "config", configFilePath)
 		} else {
-			fmt.Printf("Skill '%s' already in config\n", ref)
+			slog.Info("skill already in config", "skill", ref)
 		}
 
 		// 3. Perform Install (Sync)
@@ -104,13 +108,13 @@ If --global is set, installs to the global configuration.`,
 			return fmt.Errorf("failed to initialize store: %w", err)
 		}
 
-		fmt.Printf("Installing %s to %s...\n", ref, installRoot)
+		slog.Info("installing skill", "skill", ref, "path", installRoot)
 		name, err := action.InstallSkill(ctx, st, ref, installRoot)
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf("Successfully installed '%s' (%s)\n", name, ref)
+		slog.Info("successfully installed skill", "name", name, "ref", ref)
 		return nil
 	},
 }

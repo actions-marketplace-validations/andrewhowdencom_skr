@@ -131,6 +131,7 @@ func LoadMerged(startDir string) (*Config, error) {
 }
 
 // Save persists the config to .skr.yaml in dir
+// Save persists the config to .skr.yaml in dir
 func (c *Config) Save(dir string) error {
 	if dir == "" {
 		d, err := os.Getwd()
@@ -140,15 +141,20 @@ func (c *Config) Save(dir string) error {
 		dir = d
 	}
 
+	// Default to .skr.yaml for Save (usually local)
+	configPath := filepath.Join(dir, AltConfigName)
+	return c.SaveTo(configPath)
+}
+
+// SaveTo writes the config to a specific file path
+func (c *Config) SaveTo(path string) error {
 	data, err := yaml.Marshal(c)
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	// Default to .skr.yaml for Save (usually local)
-	configPath := filepath.Join(dir, AltConfigName)
-	if err := os.WriteFile(configPath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write %s: %w", AltConfigName, err)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("failed to write config to %s: %w", path, err)
 	}
 
 	return nil

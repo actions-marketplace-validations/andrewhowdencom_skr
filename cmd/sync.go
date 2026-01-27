@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -46,7 +47,7 @@ var syncCmd = &cobra.Command{
 		}
 
 		if len(cfg.Skills) == 0 {
-			fmt.Println("No skills defined in .skr.yaml. Nothing to sync.")
+			slog.Info("no skills defined in config, nothing to sync")
 			// Should strictly remove everything? For safety, maybe just warn for now.
 			return nil
 		}
@@ -90,7 +91,7 @@ var syncCmd = &cobra.Command{
 			// Moving install logic to a pkg/action or similar?
 			// For now, inline or copy/paste logic from install.go.
 
-			fmt.Printf("Syncing skill: %s\n", ref)
+			slog.Info("syncing skill", "ref", ref)
 
 			// Install using the action package
 			_, err := action.InstallSkill(ctx, st, ref, installRoot)

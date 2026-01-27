@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -25,7 +26,7 @@ If --global is set, removes from the global configuration.`,
 		isGlobal, _ := cmd.Flags().GetBool("global")
 
 		// 1. Determine Context and Load Config
-		var configDir string
+		var configFilePath string
 		var installRoot string
 
 		if isGlobal {
@@ -33,7 +34,8 @@ If --global is set, removes from the global configuration.`,
 			if err != nil {
 				return fmt.Errorf("failed to get home directory: %w", err)
 			}
-			configDir = filepath.Join(homeDir, ".config")
+			configDir := filepath.Join(homeDir, ".config", "skr")
+			configFilePath = filepath.Join(configDir, config.ConfigFileName)
 			installRoot = filepath.Join(homeDir, ".config", "agent", "skills")
 		} else {
 			cwd, err := os.Getwd()
@@ -45,14 +47,15 @@ If --global is set, removes from the global configuration.`,
 			if err != nil {
 				return fmt.Errorf("agent context not found (use --global or run inside a project): %w", err)
 			}
-			configDir = filepath.Dir(filepath.Dir(agentDir))
+			configDir := filepath.Dir(filepath.Dir(agentDir))
+			configFilePath = filepath.Join(configDir, config.AltConfigName)
 			installRoot = agentDir
 		}
 
-		cfg, err := config.Load(configDir)
+		cfg, err := config.Load(configFilePath)
 		// If config doesn't exist, we can't remove from it, but maybe we can remove dir?
 		// But config.Load returns empty config if not found (if we implemented it that way).
-		// Currently config.Load errors? No, it returns empty if not found.
+		// currently config.Load errors? No, it returns empty if not found.
 		if err != nil {
 			return err
 		}
@@ -73,12 +76,12 @@ If --global is set, removes from the global configuration.`,
 
 		if removed {
 			cfg.Skills = newSkills
-			if err := cfg.Save(configDir); err != nil {
+			if err := cfg.SaveTo(configFilePath); err != nil {
 				return fmt.Errorf("failed to save config: %w", err)
 			}
-			fmt.Printf("Removed '%s' from %s\n", ref, filepath.Join(configDir, config.ConfigFileName))
+			slog.Info("removed skill from config", "skill", ref, "config", configFilePath)
 		} else {
-			fmt.Printf("Skill '%s' not found in configuration\n", ref)
+			slog.Info("skill not found in config", "skill", ref)
 		}
 
 		// 3. Remove Directory
@@ -108,7 +111,7 @@ If --global is set, removes from the global configuration.`,
 			if err := os.RemoveAll(targetPath); err != nil {
 				return fmt.Errorf("failed to remove directory %s: %w", targetPath, err)
 			}
-			fmt.Printf("Removed skill directory %s\n", targetPath)
+			slog.Info("removed skill directory", "path", targetPath)
 		} else {
 			// Try splitting by colon
 			// e.g. git:v1 -> git
@@ -125,7 +128,7 @@ If --global is set, removes from the global configuration.`,
 			// Ideal: Read all SKILL.mds in installRoot to find matching name?
 			// That's expensive but accurate.
 
-			fmt.Printf("Warning: Directory %s not found. Syncing config only.\n", targetPath)
+			slog.Warn("skill directory not found, sync config only", "path", targetPath)
 		}
 
 		return nil
