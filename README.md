@@ -60,6 +60,9 @@ steps:
 ### Basic Commands
 
 ```bash
+# Validate a skill (checks structure and syntax)
+skr validate .
+
 # Build a skill from the current directory
 skr build . -t my-registry.com/my-skill:v1.0.0
 

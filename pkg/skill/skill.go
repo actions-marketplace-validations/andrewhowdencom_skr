@@ -27,6 +27,21 @@ var (
 
 // Load reads and validates a skill from the given directory path.
 func Load(dir string) (*Skill, error) {
+	s, err := LoadUnverified(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid skill: %w", err)
+	}
+
+	return s, nil
+}
+
+// LoadUnverified reads a skill from the given directory path without validating it.
+// This is useful for installing skills that might have legacy or non-compliant metadata but are otherwise functional.
+func LoadUnverified(dir string) (*Skill, error) {
 	skillPath := filepath.Join(dir, SkillFileName)
 
 	info, err := os.Stat(skillPath)
@@ -50,10 +65,6 @@ func Load(dir string) (*Skill, error) {
 		return nil, fmt.Errorf("failed to parse %s frontmatter: %w", SkillFileName, err)
 	}
 	skill.Path = dir
-
-	if err := skill.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid skill: %w", err)
-	}
 
 	return skill, nil
 }

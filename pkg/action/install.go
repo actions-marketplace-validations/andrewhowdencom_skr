@@ -100,9 +100,15 @@ func InstallSkill(ctx context.Context, st *store.Store, ref, installDir string) 
 	}
 
 	// 5. Read SKILL.md to get the name
-	s, err := skill.Load(tempDir)
+	s, err := skill.LoadUnverified(tempDir)
 	if err != nil {
-		return "", fmt.Errorf("downloaded artifact is not a valid skill: %w", err)
+		// If we can't even load it (missing file, invalid yaml), we still fail as we need the name.
+		return "", fmt.Errorf("downloaded artifact is not a recognizable skill: %w", err)
+	}
+
+	// Soft Validate: check if it's strictly valid, but don't fail, just warn.
+	if err := s.Validate(); err != nil {
+		fmt.Printf("Warning: Installed skill '%s' has validation issues: %v\n", s.Name, err)
 	}
 
 	targetPath := filepath.Join(installDir, s.Name)
